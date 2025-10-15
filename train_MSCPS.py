@@ -1,19 +1,21 @@
 import os
 import random
 import json
+import argparse
 import numpy as np
 import torch
 from torch import nn
 from itertools import cycle
 import segmentation_models_pytorch.utils as smputils
 import torchvision.transforms.functional as TF
+from tqdm import tqdm
 
 from dataprocess.datamodule import DataModule
 from model.ModelMRCPS import ModelMRCPS
 from utils.training_package import _strongTransform
 
 def compute_supervised_loss(model, batch, criterion, loss_record_temp):
-    image, mask, lrimage, lrnmask = batch
+    image, mask, lrimage = batch
 
     y_pred_1_sup = model.branch1(image, lrimage)
     y_pred_2_sup = model.branch2(image, lrimage)
@@ -43,7 +45,7 @@ def compute_consistency_loss(model, batch, criterion, loss_record_temp):
         strong_parameters["flip"] = random.randint(0, 7)
         strong_parameters["ColorJitter"] = random.uniform(0, 1)
         mix_un_img, mix_un_lrimg, mix_un_mask = _strongTransform(
-                                                            strong_parameters,
+                                                            parameters=strong_parameters,
                                                             data=image,
                                                             lrdata=lrimage,
                                                             target=pseudomask_cat,
@@ -72,8 +74,12 @@ def train_one_epoch(model, train_loader, optimizer1, optimizer2, criterion,
 
     #unlabel step
     label_iter = cycle(train_loader['label'])
-    for unlabel_batch in train_loader['unlabel']:
-        label_batch = next(label_iter)
+    for unlabel_batch in tqdm(train_loader['unlabel']):
+        label_batch = next(label_iter)  
+
+        #problem batch is list
+        label_batch = [t.to(device, non_blocking=True) for t in label_batch]
+        unlabel_batch = [t.to(device, non_blocking=True) for t in unlabel_batch]
 
         optimizer1.zero_grad()
         optimizer2.zero_grad()
@@ -97,13 +103,14 @@ def train_one_epoch(model, train_loader, optimizer1, optimizer2, criterion,
 
 
 
-def _evaluate(predmask, y, metrics, stage: str = "valid"):
+def _evaluate(predmask, y, metrics=None, stage: str = "valid"):
     """
     計算模型在一批資料上的評估指標（不依賴 Lightning）
     
     Args:
         predmask: list of predicted masks (每個分支一個)
         y: ground truth tensor
+        metrics: list of metric functions (可為 smputils.Metric 類)
         stage: 'train' | 'valid' | 'test'
     
     Returns:
@@ -111,6 +118,17 @@ def _evaluate(predmask, y, metrics, stage: str = "valid"):
     """
     results = {}
     results_list = []
+    if metrics is None:
+        metrics = []  # 可傳入 smputils.metrics.IoU() 之類的 metric
+    
+    # 定義本地 IoU 函數（若沒給 metric）
+    def _iou(pred, target, eps=1e-6):
+        """自定義 IoU 計算"""
+        pred = (pred > 0.5).float()  # 確保是 0/1 mask
+        target = (target > 0.5).float()
+        intersection = (pred * target).sum()
+        union = pred.sum() + target.sum() - intersection
+        return (intersection + eps) / (union + eps)
 
     # 單模型
     if len(predmask) == 1:
@@ -127,21 +145,28 @@ def _evaluate(predmask, y, metrics, stage: str = "valid"):
         results["sensitivity"] = sensitivity.item()
         results["specificity"] = specificity.item()
 
-        # segmentation metrics
+        # smputils metric + 自動 iou
+        has_iou = False
         for metric_fn in metrics:
+            name = metric_fn.__class__.__name__ if hasattr(metric_fn, '__class__') else metric_fn.__name__
             metric_value = metric_fn(pm, y)
-            results[metric_fn.__name__] = metric_value.item()
+            results[name] = metric_value.item()
+            if "IoU" in name or "Jaccard" in name:
+                has_iou = True
+
+        if not has_iou:
+            results["IoU"] = _iou(pm, y).item()
 
         results_list.append(results)
-        print(f"[{stage}] sensitivity: {sensitivity:.4f}, specificity: {specificity:.4f}")
 
     # 多模型
     else:
         sensitivity_values = []
         specificity_values = []
-        metric_results = {m.__name__: [] for m in metrics}
+        metric_results = {m.__class__.__name__ if hasattr(m, '__class__') else m.__name__: [] for m in metrics}
+        iou_values = []
 
-        for idx, pm in enumerate(predmask):
+        for pm in predmask:
             tp = (torch.eq(pm, y) & (y == 1)).sum()
             fp = (torch.eq(pm, 1) & (y == 0)).sum()
             fn = (torch.eq(pm, 0) & (y == 1)).sum()
@@ -152,43 +177,34 @@ def _evaluate(predmask, y, metrics, stage: str = "valid"):
             sensitivity_values.append(sensitivity.item())
             specificity_values.append(specificity.item())
 
+            # smputils metric
             for metric_fn in metrics:
+                name = metric_fn.__class__.__name__ if hasattr(metric_fn, '__class__') else metric_fn.__name__
                 metric_value = metric_fn(pm, y)
-                metric_results[metric_fn.__name__].append(metric_value.item())
+                metric_results[name].append(metric_value.item())
+
+            # 自動 IoU
+            iou_values.append(_iou(pm, y).item())
 
         # 平均結果
         results["sensitivity"] = float(torch.tensor(sensitivity_values).mean())
         results["specificity"] = float(torch.tensor(specificity_values).mean())
+
         for name, vals in metric_results.items():
             results[name] = float(torch.tensor(vals).mean())
 
+        # 若沒傳入 IoU 類 metric，自動補上
+        if not any("IoU" in k or "Jaccard" in k for k in metric_results.keys()):
+            results["IoU"] = float(torch.tensor(iou_values).mean())
+
         results_list.append(results)
-        print(f"[{stage}] avg sensitivity: {results['sensitivity']:.4f}, "
-              f"avg specificity: {results['specificity']:.4f}")
 
     return results
 
 
 
-def save_validation_images(model, image_batch, mask_batch, predensem_list, epoch, valid_imageSavePath, max_num=4):
-    """
-    儲存 validation 的幾張影像：
-     - 原圖 (image)
-     - gt (mask)
-     - inference (ensemble / 第一個 branch)
-     - overlay / overlayGT
-
-    參數:
-      model: 可能含有 model.valid_imageSavePath 屬性
-      image_batch: tensor [B, C, H, W] (0..1 float)
-      mask_batch: tensor [B, H, W] (class indices)
-      predensem_list: list like [predensem], 其中 predensem 是 [B, H, W]
-      epoch: 當前 epoch，用於檔名
-      max_num: 最多儲存幾張
-    """
-    save_dir = valid_imageSavePath
-    os.makedirs(save_dir, exist_ok=True)
-
+def save_validation_images(model, image_batch, mask_batch, predensem_list, epoch, imageSavePath, max_num=4):
+    
     # 取要儲存的張數
     B = image_batch.shape[0]
     nsave = min(B, max_num)
@@ -235,10 +251,11 @@ def save_validation_images(model, image_batch, mask_batch, predensem_list, epoch
         round_n = getattr(model, "round_n", "r")
         current_epoch = getattr(model, "current_epoch", epoch)
 
-        pil_img.save(os.path.join(save_dir, f'valid_{client_id}_round{round_n}_epoch{current_epoch}_img{img_idx}_img.png'), format='PNG')
-        pil_gt.save(os.path.join(save_dir, f'valid_{client_id}_round{round_n}_epoch{current_epoch}_img{img_idx}_gt.png'), format='PNG')
-        pil_pred.save(os.path.join(save_dir, f'valid_{client_id}_round{round_n}_epoch{current_epoch}_img{img_idx}_inf.png'), format='PNG')
-        overlay.save(os.path.join(save_dir, f'valid_{client_id}_round{round_n}_epoch{current_epoch}_img{img_idx}_overlay.png'), format='PNG')
+        if not (imageSavePath is None):
+            pil_img.save(os.path.join(imageSavePath, f'valid_{client_id}_round{round_n}_epoch{current_epoch}_img{img_idx}_img.png'), format='PNG')
+            pil_gt.save(os.path.join(imageSavePath, f'valid_{client_id}_round{round_n}_epoch{current_epoch}_img{img_idx}_gt.png'), format='PNG')
+            pil_pred.save(os.path.join(imageSavePath, f'valid_{client_id}_round{round_n}_epoch{current_epoch}_img{img_idx}_inf.png'), format='PNG')
+            overlay.save(os.path.join(imageSavePath, f'valid_{client_id}_round{round_n}_epoch{current_epoch}_img{img_idx}_overlay.png'), format='PNG')
 
 
 
@@ -249,7 +266,7 @@ def validate(model, val_loader, criterion, metrics, device, epoch, imageSavePath
     evaRecords = []  # 儲存每個 batch 的結果
 
     with torch.no_grad():
-        for batch_idx, batch in enumerate(val_loader):
+        for batch_idx, batch in enumerate(tqdm(val_loader)):
             image, mask, lrimage = [b.to(device) for b in batch]
             
             # --- forward ---
@@ -290,21 +307,30 @@ def validate(model, val_loader, criterion, metrics, device, epoch, imageSavePath
     return mean_loss, mean_eval
 
 
-
-
-def main():
+def main(args):
     ## train setting / config read
-    num_epochs = 1
-    consistencyratio = 0.5
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    save_baseName = 'MSCPS1009_liver'
-    valid_imageSavePath = f'./{save_baseName}/results/valid_img'
-    test_imageSavePath = f'./{save_baseName}/results/test_img'
-    os.makedirs(valid_imageSavePath, exist_ok=True)
-    os.makedirs(test_imageSavePath, exist_ok=True)
+    num_epochs = args.num_epochs
+    consistencyratio = args.consistency_ratio
+    save_baseName = args.save_base
+    save_validImg = args.save_valimg
+    save_testImg = args.save_testimg
+    data_argpath = args.data_cfg
+    device = torch.device(args.device if torch.cuda.is_available() else 'cpu')
+
+    ## img save path
+    if save_validImg:
+        valid_imageSavePath = f'./{save_baseName}/valid_img'
+        os.makedirs(valid_imageSavePath, exist_ok=True)
+    else:
+        valid_imageSavePath = None
+    
+    if save_testImg:
+        test_imageSavePath = f'./{save_baseName}/test_img'
+        os.makedirs(test_imageSavePath, exist_ok=True)
+    else:
+        test_imageSavePath = None
 
     ## data prepare
-    data_argpath = './dataprocess/cfgs/data_config.yaml'
     data_module = DataModule(data_argpath)
 
     train_loader = data_module.train_dataloader()   # [label, lunlabel]
@@ -332,18 +358,21 @@ def main():
 
     ## training
     for epoch in range(num_epochs):
+        print(f"Epoch {epoch} Train")
         train_loss_dict  = train_one_epoch(model, train_loader, opt1, opt2, criterion, consistencyratio, device)
+        print(f"Epoch {epoch} Valid")
         val_loss, evaRecord = validate(model, val_loader, criterion, metrics, device, epoch, valid_imageSavePath)
         evaRecords.append(evaRecord)
 
         sch1.step()
         sch2.step()
 
-        print(f"[Epoch {epoch}] Train total: {train_loss_dict['total']:.4f} | Val: {val_loss:.4f}")
+        print(f"[Epoch {epoch}] Train total loss: {train_loss_dict['total']:.4f} | Val loss: {val_loss:.4f}")
+        print(f"[Epoch {epoch}] Val acc:{evaRecord}")
 
         if val_loss < best_val_loss:
             best_val_loss = val_loss
-            torch.save(model.state_dict(), f'./{save_baseName}/results/best_model_epoch{epoch}.pth')
+            torch.save(model.state_dict(), f'./{save_baseName}/results/best_model_epoch.pth')
 
     # save final weight
     torch.save(model.state_dict(), f'./{save_baseName}/results/final_model.pth')
@@ -355,10 +384,32 @@ def main():
     ## testing (optional)
     test_loss, testEvaRecord = validate(model, test_loader, criterion, metrics, device, 0, test_imageSavePath) 
     print(f"Test avg loss: {test_loss:.4f}")
+    print(f"Test avg acc: {testEvaRecord}")
 
     #save test record as json
     with open(f'./{save_baseName}/results/test_records.json', 'w') as f:
         json.dump(testEvaRecord, f, indent=2)
 
+
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser(description="MSCPS Training Script")
+
+    # Training parameters
+    parser.add_argument('--num_epochs', type=int, default=3, help='Total number of training epochs')
+    parser.add_argument('--consistency_ratio', type=float, default=0.5, help='Weight for semi-supervised consistency loss')
+    # parser.add_argument('--batch_size', type=int, default=8, help='Training batch size') #define in dataprocess cfg
+
+    # Data / Paths
+    parser.add_argument('--save_base', type=str, default='results/MSCPS1015_tiger', help='Base path to save results')
+    parser.add_argument('--data_cfg', type=str, default='./dataprocess/cfg/datacfg_MRCPS_tiger.yaml', help='Path to data config YAML file')
+
+    # Save options
+    parser.add_argument('--save_valimg', action='store_true', help='Save validation images')
+    parser.add_argument('--save_testimg', action='store_true', help='Save test images')
+
+    # GPU / device
+    parser.add_argument('--device', type=str, default='cuda', help='cuda / cpu')
+
+    args = parser.parse_args()
+
+    main(args)

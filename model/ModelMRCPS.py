@@ -1,7 +1,8 @@
 import torch
+import torch.nn as nn
 from .MSUnetHub import MSUnetHub
 
-class ModelMRCPS():
+class ModelMRCPS(nn.Module):
     def __init__(self, lrscale=8):
         super().__init__()
         #Resnest + Segformer (CNN branch)

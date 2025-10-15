@@ -4,8 +4,8 @@ import torch.nn.functional as F
 
 from typing import Optional
 
-from encoderbuild import encoder_select
-from initialize import initialize_decoder, initialize_head
+from model.encoderbuild import encoder_select
+from model.initialize import initialize_decoder, initialize_head
 
 
 class Conv2dBnAct(nn.Module):
@@ -126,7 +126,7 @@ class UnetDecoder(nn.Module):
         initialize_decoder(self.blocks)
         initialize_head(self.final_conv)
 
-    def forward(self, x: List[torch.Tensor]):
+    def forward(self, x: list[torch.Tensor]):
         encoder_head = x[0]
         skips = x[1:]
         x = self.center(encoder_head)

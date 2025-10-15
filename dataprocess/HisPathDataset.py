@@ -110,16 +110,32 @@ class HisPathDataset(Dataset):
         label_keys = ['whole_frontground', 'partial_frontground', 'partial_tissue_wtarget']
         unlabel_keys = ['white_background', 'tissue_background', 'partial_tissue']
 
+        # limit = {
+        #     'white_background': [10, 1000],
+        #     'tissue_background': [1000, 150000],
+        #     'whole_frontground': [0, 150000],                #label
+        #     'partial_frontground': [0, 150000],              #label
+        #     'partial_tissue': [1000, 100000],
+        #     'partial_tissue_wtarget': [0, 0]     #label
+        # }
+        
         limit = {
-            'white_background': [10, 1000],
-            'tissue_background': [1000, 150000],
-            'whole_frontground': [0, 150000],                #label
-            'partial_frontground': [0, 150000],              #label
-            'partial_tissue': [1000, 100000],
+            'white_background': [0, 5000],
+            'tissue_background': [0, 5000],
+            'whole_frontground': [0, 5000],                #label
+            'partial_frontground': [0, 5000],              #label
+            'partial_tissue': [0, 5000],
             'partial_tissue_wtarget': [0, 0]     #label
         }
+        # limit = {
+        #     'white_background': [0, 20],
+        #     'tissue_background': [0, 20],
+        #     'whole_frontground': [0, 20],                #label
+        #     'partial_frontground': [0, 20],              #label
+        #     'partial_tissue': [0, 20],
+        #     'partial_tissue_wtarget': [0, 0]     #label
+        # }
         
-
         if ratio['whole_frontground']!=0: #label set 
             foreground_datas=[]   
             for k in label_keys:

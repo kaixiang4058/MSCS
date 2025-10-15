@@ -13,8 +13,8 @@ from torch.utils.data import Dataset, DataLoader
 import torch.nn.functional as F
 
 # from used_models.MRCPS.utils import get_strong_aug, get_weak_aug, get_preprocess
-from dataset.transform import get_strong_aug, get_weak_aug, get_preprocess
-from dataset.HisPathDataset import HisPathDataset
+from dataprocess.transform import get_strong_aug, get_weak_aug, get_preprocess
+from dataprocess.HisPathDataset import HisPathDataset
 
 class DataModule():
     def __init__(self, cfgpath: str, client_id=0):

@@ -1,6 +1,6 @@
-import transformsgpu
+from utils import transformsgpu
 
-def _strongTransform(self, parameters, data=None, lrdata=None, target=None,
+def _strongTransform(parameters, data=None, lrdata=None, target=None,
                     cutaug = transformsgpu.cutout, coloraug = transformsgpu.colorJitter, flipaug = transformsgpu.flip,
                     isaugsym=True):
     assert ((data is not None) or (target is not None))

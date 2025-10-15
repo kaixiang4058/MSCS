@@ -1,7 +1,8 @@
 import torch
+import torch.nn as nn
 from .MSUnetHub import MSUnetHub
 
-class ModelMRCNN():
+class ModelMRCNN(nn.Module):
     def __init__(self, lrscale=8):
         super().__init__()
         #Resnest + Segformer (CNN branch)
@@ -13,7 +14,7 @@ class ModelMRCNN():
         predmask = self.model(x, lrx)
         return torch.argmax(predmask, dim=1)
 
-class ModelMRTrans():
+class ModelMRTrans(nn.Module):
     def __init__(self, lrscale=8):
         super().__init__()
         #Segformer + Segformer (Transformer branch)
