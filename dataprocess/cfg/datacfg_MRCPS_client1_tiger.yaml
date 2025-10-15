@@ -1,0 +1,98 @@
+# SemiSegPathology_test SemiSegPathology
+project: 'HistSeg'
+expname: ''
+
+expset: {
+  labelWSI: 5,
+  totalWSI: 75,
+  fold: 1,
+  #fversion: None,
+  epochs: 20,
+  exp_seed: 42,
+  env_seed: 42,
+  model_seed: 42,
+  precision: 16,
+  lrratio: 8,
+  }
+
+rootset: {
+  #--Data path--
+  #Tiger dataset
+  dataroot: '/work/u2676425/dataset/tiger_dataset/tiger-training/',
+  tifroot: '/work/u2676425/dataset/tiger_dataset/tiger-training/wsirois/wsi-level-annotations/images',
+  # maskroot: '/work/u2676425/dataset/tiger_dataset/tiger-training/wsirois/wsi-level-annotations/MRCPS_masks',
+  maskroot: '/work/u2676425/dataset/tiger_dataset/tiger-training/wsirois/wsi-level-annotations/masks_refine',
+
+  #--pkl--
+  #Tiger dataset
+  pklroot_train: '/work/u2676425/dataset/tiger_dataset/tiger-training/MRCPS_tigerRefine_p512_s128_train_labeled',
+  # pklroot_train: '/work/u2676425/dataset/tiger_dataset/tiger-training/MRCPS_p512_s128_train_labeled',
+  pklroot_train_unlabel: '/work/u2676425/dataset/tiger_dataset/tiger-training/MRCPS_p512_s512_train_unlabeled',
+  pklroot_test: '/work/u2676425/dataset/tiger_dataset/tiger-training/MRCPS_p512_s128_train_labeled',
+
+  #--datalist--
+  # datalist: './used_models/MRCPS/dataset/fold_mackay.json',
+  # datalist: './used_models/MRCPS/dataset/fold_tiger_client1.json',
+  # datalist: './used_models/MRCPS/dataset/fold_tiger_client1_double.json',
+  # datalist: './used_models/MRCPS/dataset/fold_tiger_client1_double_choose.json',
+  datalist: './used_models/MRCPS/dataset/fold_tiger_client1_double_choose2.json',
+  # datalist: './used_models/MRCPS/dataset/fold_tiger_client1_double_choose2_unlabel.json',
+  # datalist: './used_models/MRCPS/dataset/fold_tiger_client1_double_choose2_labelonly.json',
+  # datalist: './used_models/MRCPS/dataset/fold_tiger_client1_double_shuffle.json',
+  # datalist: './used_models/MRCPS/dataset/fold_tiger_client_mix.json',
+  # datalist: './used_models/MRCPS/dataset/fold_tiger_client1_evaluation.json',
+
+  # datalist: './used_models/MRCPS/dataset/fold_camelyon_client1.json',
+  # datalist: './used_models/MRCPS/dataset/fold_camelyon_client1_evaluation.json',
+
+  fl: True
+}
+
+# SSL setting
+# type: sup, mix, cps, cpsmix, cpseval, cpsevalmix
+# cuttype: cut, cow
+# isevalloss: True, False
+sslset: {
+  type: 'mrcpsmix',
+  consistencyratio: 1.0,
+}
+
+classes: ["tissue", "tumor"]
+
+# CrossEntropyLoss, BCEWithLogitsLoss, BCEDiceLoss
+# loss: {
+#   type: "CrossEntropyLoss",
+# }
+
+# CosineAnnealingWR, CosineDecayWarmUp, PolyDecayWarmUp
+# optim: {
+#   type: "SGD",
+#   lr: 0.01
+# }
+# sched: {
+#   type: "PolyDecayWarmUp",
+#   lr_end: 0.002
+# }
+
+# MRUnetRnst, MRSFormer1
+# branch1: './config/network/MRUnestFormer.yaml'
+# branch2: './config/network/MRUSFormer.yaml'
+# branch1: './config/network/UnetCNN.yaml'
+# branch3: './config/network/UnetFormer.yaml'
+# branch2: './config/network/UnetTissue.yaml'
+
+traindl: {
+  patchsize: 512,
+  stridesize: 384,
+  tifpage: 0,
+  batchsize:  20, #minimine 4
+  accumulate_grad_batches: 1
+}
+
+testdl: {
+  patchsize: 512,
+  stridesize: 384,
+  tifpage: 0,
+  batchsize: 20,
+}
+

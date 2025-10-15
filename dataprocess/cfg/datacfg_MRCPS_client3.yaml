@@ -1,0 +1,99 @@
+# SemiSegPathology_test SemiSegPathology
+project: 'HistSeg'
+expname: ''
+
+expset: {
+  labelWSI: 5,
+  totalWSI: 75,
+  fold: 1,
+  #fversion: None,
+  epochs: 20,
+  exp_seed: 42,
+  env_seed: 42,
+  model_seed: 42,
+  precision: 16,
+  lrratio: 8,
+  }
+
+rootset: {
+  #--Data path--
+  #liver dataset
+  dataroot: '/work/u7085556/SemiSegPathology/',
+  tifroot: '/work/u7085556/SemiSegPathology/tifs',
+  maskroot: '/work/u7085556/SemiSegPathology/masks',
+
+  #Tiger dataset
+  # dataroot: '/work/u2676425/dataset/tiger_dataset/tiger-training/',
+  # tifroot: '/work/u2676425/dataset/tiger_dataset/tiger-training/wsirois/wsi-level-annotations/images',
+  # maskroot: '/work/u2676425/dataset/tiger_dataset/tiger-training/wsirois/wsi-level-annotations/MRCPS_masks',
+  # maskroot: '/work/u2676425/dataset/tiger_dataset/tiger-training/wsirois/wsi-level-annotations/MRCPS_masks_refine',
+
+  #Camelyon dataset
+  # dataroot: '/work/u2676425/dataset/Camelyon17/',
+  # tifroot: '/work/u2676425/dataset/camelyon17/images',
+  # maskroot: '/work/u2676425/dataset/camelyon17/masks',
+
+  #--pkl--
+  #liver dataset
+  pklroot_train: '/work/u7085556/SemiSegPathology/l0_p512_s512_train',
+  pklroot_train_unlabel: '/work/u7085556/SemiSegPathology/l0_p512_s512_train',
+  pklroot_test: '/work/u7085556/SemiSegPathology/l0_p512_s512_test',
+
+  #Tiger dataset
+  # pklroot_train: '/work/u2676425/dataset/tiger_dataset/tiger-training/MRCPS_tigerRefine_p512_s128_train_labeled',
+  # # pklroot_train: '/work/u2676425/dataset/tiger_dataset/tiger-training/MRCPS_p512_s128_train_labeled',
+  # pklroot_train_unlabel: '/work/u2676425/dataset/tiger_dataset/tiger-training/MRCPS_p512_s512_train_unlabeled',
+  # pklroot_test: '/work/u2676425/dataset/tiger_dataset/tiger-training/MRCPS_p512_s128_train_labeled',
+
+  #Camelyon dataset
+  # pklroot_train: '/work/u2676425/dataset/camelyon17/annotation_pkls/MRCPS_Camelyon_p512_s384_label_pkls',
+  # pklroot_train_unlabel: '/work/u2676425/dataset/camelyon17/annotation_pkls/MRCPS_Camelyon_p512_s384_unlabel_pkls',
+  # pklroot_test: '/work/u2676425/dataset/camelyon17/annotation_pkls/MRCPS_Camelyon_p512_s384_label_pkls',
+
+  #--datalist--
+  datalist: './used_models/MRCPS/dataset/fold_nc3kv2.json',
+  # datalist: './used_models/MRCPS/dataset/fold_ncku11-15_ch2.json',
+  # datalist: './used_models/MRCPS/dataset/fold_tiger_client3.json',
+  # datalist: './used_models/MRCPS/dataset/fold_tiger_client3_double.json',
+  # datalist: './used_models/MRCPS/dataset/fold_tiger_client3_double_choose.json',
+  # datalist: './used_models/MRCPS/dataset/fold_tiger_client3_double_choose2.json',
+  # datalist: './used_models/MRCPS/dataset/fold_tiger_client3_double_choose2_unlabel.json',
+  # datalist: './used_models/MRCPS/dataset/fold_tiger_client3_double_choose2_labelonly.json',
+  # datalist: './used_models/MRCPS/dataset/fold_tiger_client3_double_shuffle.json',
+  # datalist: './used_models/MRCPS/dataset/fold_tiger_client1_test.json', #for test
+  # datalist: './used_models/MRCPS/dataset/fold_tiger_client2_sameboth.json',
+  # datalist: './used_models/MRCPS/dataset/fold_tiger_client3_evaluation.json',
+
+  # datalist: './used_models/MRCPS/dataset/fold_camelyon_client3.json',
+  # datalist: './used_models/MRCPS/dataset/fold_camelyon_client3_evaluation.json',
+
+  fl: True
+}
+
+# SSL setting
+# type: sup, mix, cps, cpsmix, cpseval, cpsevalmix
+# cuttype: cut, cow
+# isevalloss: True, False
+sslset: {
+  type: 'mrcpsmix',
+  consistencyratio: 1.0,
+}
+
+classes: ["tissue", "tumor"]
+
+
+traindl: {
+  patchsize: 512,
+  stridesize: 384,
+  tifpage: 0,
+  batchsize:  20,
+  accumulate_grad_batches: 1
+}
+
+testdl: {
+  patchsize: 512,
+  stridesize: 384,
+  tifpage: 0,
+  batchsize: 20,
+}
+
