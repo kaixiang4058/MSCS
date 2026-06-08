@@ -1,0 +1,28 @@
+# Target define
+classes: ["Background", "benign", "tumor", "invasive"]
+lr_ratio: 8
+
+# Data path
+rootset: {
+  #--Data path--
+  dataroot: "D:/dataset/Breast_Tumors",
+  #--datalist--
+  datalist: "D:/dataset/Breast_Tumors/TCVGH/datalist.json",
+}
+
+# Data size and number setting
+traindl: {
+  patchsize: 512,
+  stridesize: 384,
+  tifpage: 0,
+  batchsize:  8, #minimine 4
+  accumulate_grad_batches: 1
+}
+
+testdl: {
+  patchsize: 512,
+  stridesize: 384,
+  tifpage: 0,
+  batchsize: 8,
+}
+

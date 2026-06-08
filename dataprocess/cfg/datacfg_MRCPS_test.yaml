@@ -1,0 +1,34 @@
+# Target define
+classes: ["tissue", "tumor"]
+
+# Data path
+rootset: {
+  #--Data path--
+  dataroot: '/work/u2676425/flag_project/flag/ncku002/dataset/',
+  tifroot: '/work/u2676425/flag_project/flag/ncku002/dataset/images/',
+  maskroot: '/work/u2676425/flag_project/flag/ncku002/dataset/masks/',
+
+  #--pkl--
+  pklroot_label: '/work/u2676425/flag_project/flag/ncku002/dataset/pkl/MRCPS_p512_s384_label_level0/',
+  pklroot_unlabel: '/work/u2676425/flag_project/flag/ncku002/dataset/pkl/MRCPS_p512_s512_unlabel_level0/',
+
+  #--datalist--
+  datalist: '/work/u2676425/flag_project/flag/ncku002/dataset/datalist.json',
+}
+
+# Data size and number setting
+traindl: {
+  patchsize: 512,
+  stridesize: 384,
+  tifpage: 0,
+  batchsize:  8, #minimine 4
+  accumulate_grad_batches: 1
+}
+
+testdl: {
+  patchsize: 512,
+  stridesize: 384,
+  tifpage: 0,
+  batchsize: 8,
+}
+

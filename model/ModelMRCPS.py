@@ -3,12 +3,12 @@ import torch.nn as nn
 from .MSUnetHub import MSUnetHub
 
 class ModelMRCPS(nn.Module):
-    def __init__(self, lrscale=8):
+    def __init__(self, lrscale=8, classes=4):
         super().__init__()
         #Resnest + Segformer (CNN branch)
-        self.branch1 = MSUnetHub(encoder_name="resnest26d", lrbackbone="nvidia/mit-b1", lrscale=lrscale)
+        self.branch1 = MSUnetHub(encoder_name="resnest26d", lrbackbone="nvidia/mit-b1", lrscale=lrscale, classes=classes)
         #Segformer + Segformer (Transformer branch)
-        self.branch2 = MSUnetHub(encoder_name="nvidia/mit-b1", lrbackbone="nvidia/mit-b1", lrscale=lrscale)
+        self.branch2 = MSUnetHub(encoder_name="nvidia/mit-b1", lrbackbone="nvidia/mit-b1", lrscale=lrscale, classes=classes)
     
     def forward(self, x, lrx, step=1):
         # for inference output not suitable for training (traning need used branch output)

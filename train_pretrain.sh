@@ -1,0 +1,1 @@
+python train_MSCPS.py --num_epochs 10 --consistency_ratio 0.5 --preweight "/home/u2676425/workspace/FL_local_0630/model_weights_record/fl_whole_tiger5W_r10e3w4_TCGA.pt" --save_base "results/MSCS1203_newc1_pretrain" --data_cfg "./dataprocess/cfg/datacfg_MRCPS_fixpath.yaml" --save_valimg --save_testimg

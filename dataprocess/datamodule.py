@@ -40,43 +40,14 @@ class DataModule():
         print(f"label batchsize: {self.label_batchsize}\tunlabel batchsize: {self.unlabel_batchsize}")
 
 
-        # ratio of input
-        self.train_data_ratio = {
-            'white_background': 0.0001,
-            'tissue_background': 1,
-            'whole_frontground': 1,
-            'partial_frontground': 1,
-            'partial_tissue': 1,
-            'partial_tissue_wtarget': 1
-        }
-
-        self.train_unlabel_data_ratio = {
-            'white_background': 0,
-            'tissue_background': 1,
-            'whole_frontground': 0,         #no front
-            'partial_frontground': 0,       #no front
-            'partial_tissue': 1,
-            'partial_tissue_wtarget': 0     #no target
-        }
-
-        self.test_data_ratio = {
-            'white_background': 0,
-            'tissue_background': 1,
-            'whole_frontground': 1,
-            'partial_frontground': 1,
-            'partial_tissue': 1,
-            'partial_tissue_wtarget': 1
-        }
-
         settings = {
-            "root":self.traincfg['rootset']['dataroot'],
-            "tifroot":self.traincfg['rootset']['tifroot'],
-            "maskroot":self.traincfg['rootset']['maskroot'],
+            "dataroot":self.traincfg['rootset']['dataroot'],
             "datalist":self.traincfg['rootset']['datalist'],
             "classes":len(self.traincfg['classes']),
             "patchsize":self.traincfg['traindl']['patchsize'],
             "stridesize":self.traincfg['traindl']['stridesize'],
             "tifpage":self.traincfg['traindl']['tifpage'],
+            "lr_ratio":self.traincfg['lr_ratio'],
             "preprocess":get_preprocess()
         }
 
@@ -88,8 +59,6 @@ class DataModule():
         # print('*****training label dataset')
         self.train_label_dataset = self.dataset(
             stage='train_label',
-            pklpath = self.traincfg['rootset']['pklroot_label'],
-            data_ratio=self.train_data_ratio,
             transform=label_aug,
             **settings
             )
@@ -97,8 +66,6 @@ class DataModule():
         # print('*****training unlabel dataset')
         self.train_unlabel_dataset = self.dataset(
             stage='train_unlabel',
-            pklpath = self.traincfg['rootset']['pklroot_unlabel'],
-            data_ratio=self.train_unlabel_data_ratio,
             transform=unlabel_aug,
             **settings
             )
@@ -107,19 +74,19 @@ class DataModule():
         # print('*****training valid dataset')
         self.valid_dataset = self.dataset(
             stage='valid',
-            pklpath = self.traincfg['rootset']['pklroot_label'],
-            data_ratio=self.test_data_ratio,
             **settings
             )
         
         # print('*****training test dataset')
         self.test_dataset = self.dataset(
             stage='test',
-            pklpath = self.traincfg['rootset']['pklroot_label'],
-            data_ratio=self.test_data_ratio,
             **settings
             )
-        
+
+    def seed_worker(self,worker_id):
+        worker_seed = torch.initial_seed() % 2**32
+        np.random.seed(worker_seed)
+        random.seed(worker_seed)        
 
     def train_dataloader(self):
         # print('*****training dataloader')
@@ -150,6 +117,7 @@ class DataModule():
                 # dataset=trainset_l,  # use subset
                 batch_size = self.label_batchsize,
                 num_workers = self.num_workers,
+                worker_init_fn=self.seed_worker,
                 **settings
                 )
             dataloader_dict['label'] = labeled_dataloader
@@ -159,6 +127,7 @@ class DataModule():
                 # dataset=trainset_u,  # use subset
                 batch_size = self.unlabel_batchsize,
                 num_workers = self.num_workers,
+                worker_init_fn=self.seed_worker,
                 **settings
                 )
             dataloader_dict['unlabel'] = unlabeled_dataloader
@@ -171,6 +140,7 @@ class DataModule():
                 # dataset = sub_val,
                 batch_size = self.traincfg['testdl']['batchsize'],
                 num_workers=self.num_workers,
+                worker_init_fn=self.seed_worker,
                 pin_memory=True,
                 persistent_workers=True,
                 )
@@ -185,6 +155,7 @@ class DataModule():
                 # dataset=sub_test,
                 batch_size= self.traincfg['testdl']['batchsize'],
                 num_workers=self.num_workers,
+                worker_init_fn=self.seed_worker,
                 pin_memory=True,
                 persistent_workers=True,
                 )
