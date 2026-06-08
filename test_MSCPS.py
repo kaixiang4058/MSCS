@@ -25,11 +25,11 @@ def set_seed(seed=42):
     torch.cuda.manual_seed_all(seed)
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
-    torch.use_deterministic_algorithms(True)
+    # torch.use_deterministic_algorithms(True)
     print(f"[Seed] {seed}")
     
 
-def validate(model, val_loader, criterion, metrics, device, epoch, imageSavePath):
+def validate(model, val_loader, metrics, device, epoch, imageSavePath):
     model.eval()
     total_loss = 0
     evaRecords = []  # 儲存每個 batch 的結果
@@ -43,9 +43,9 @@ def validate(model, val_loader, criterion, metrics, device, epoch, imageSavePath
             y_pred_2 = model.branch2(image, lrimage)
             
             # --- loss ---
-            loss_1 = criterion(y_pred_1, mask)
-            loss_2 = criterion(y_pred_2, mask)
-            total_loss += ((loss_1 + loss_2) / 2).item()
+            # loss_1 = criterion(y_pred_1, mask)
+            # loss_2 = criterion(y_pred_2, mask)
+            # total_loss += ((loss_1 + loss_2) / 2).item()
             
             # --- evaluation ---
             predensem_b1 = [torch.argmax(y_pred_1.softmax(1), dim=1)]
@@ -54,9 +54,9 @@ def validate(model, val_loader, criterion, metrics, device, epoch, imageSavePath
             predensem = [torch.argmax(voting, dim=1)]
 
             evaRecords.append({
-                "b1": _evaluate(predensem_b1, mask, metrics, "valid b1"),
-                "b2": _evaluate(predensem_b2, mask, metrics, "valid b2"),
-                "ens": _evaluate(predensem, mask, metrics, "valid ens"),
+                "b1": _evaluate(predensem_b1, mask, 4),
+                "b2": _evaluate(predensem_b2, mask, 4),
+                "ens": _evaluate(predensem, mask, 4),
             })
 
             # --- 儲存影像 (僅第一個 batch) ---
@@ -78,13 +78,11 @@ def validate(model, val_loader, criterion, metrics, device, epoch, imageSavePath
 
 def main(args):
     ## train setting / config read
-    num_epochs = args.num_epochs
-    consistencyratio = args.consistency_ratio
+    weight = args.weight
     save_baseName = args.save_base
     save_testImg = args.save_testimg
     data_argpath = args.data_cfg
     device = torch.device(args.device if torch.cuda.is_available() else 'cpu')
-    preweight = args.preweight
 
     SaveBasePath = f'./{save_baseName}/'
     os.makedirs(SaveBasePath, exist_ok=True)
@@ -106,8 +104,11 @@ def main(args):
     ## model prepare
     model = ModelMRCPS()
 
-    if os.path.isfile(preweight):
-        state_dict = torch.load(preweight, map_location=device)
+    print(weight)
+    print(os.path.isfile(weight))
+    if os.path.isfile(weight):
+        print('===load weight===')
+        state_dict = torch.load(weight, map_location=device)
         model.load_state_dict(state_dict)
 
     model = model.to(device)
@@ -125,7 +126,7 @@ def main(args):
     best_val_loss = float("inf")
 
     ## testing (optional)
-    test_loss, testEvaRecord = validate(model, test_loader, criterion, metrics, device, 0, test_imageSavePath) 
+    test_loss, testEvaRecord = validate(model, test_loader, metrics, device, 0, test_imageSavePath) 
     print(f"Test avg loss: {test_loss:.4f}")
     print(f"Test avg acc: {testEvaRecord}")
 

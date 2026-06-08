@@ -42,6 +42,34 @@ python train_MSCPS.py --num_epochs 20 --consistency_ratio 0.5 --save_base "resul
 
 ---
 
+### Test 使用說明
+
+可使用 `test.sh` 或直接執行 `test_MSCPS.py` 進行測試：
+```
+bash test.sh
+```
+
+或直接執行：
+```
+python test_MSCPS.py --weight "./results/MSCS_labBreast_Mackey_0601/best_model_epoch.pth" --save_base "results/MSCS_labBreast_Mackey_0601" --data_cfg "./dataprocess/cfg/datacfg_MRCPS_labBreast.yaml" --save_testimg
+```
+
+**Options:**
+
+| Argument        | Type   | Default                               | Description                                 |
+|----------------|--------|----------------------------------------|---------------------------------------------|
+| --weight       | str    | ""                                     | 欲載入的模型權重檔案                          |
+| --save_base    | str    | results/MSCPS1015_tiger                | 結果儲存根目錄                               |
+| --data_cfg     | str    | ./dataprocess/cfg/datacfg_MRCPS_tiger.yaml | 資料配置 YAML 路徑                 |
+| --save_testimg | flag   | False                                  | 儲存測試推論影像                             |
+| --device       | str    | cuda                                   | 裝置: cuda 或 cpu                            |
+
+測試結果會輸出為：
+- `./{save_base}/test_records.json`
+- 若啟用 `--save_testimg`，則會在 `./{save_base}/test_img/` 保存測試影像
+
+---
+
 ### Output
 - Best and final model weights:
   - `./{save_base}/results/best_model_epoch.pth`

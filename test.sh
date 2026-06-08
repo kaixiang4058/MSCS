@@ -1,1 +1,1 @@
-python test_MSCPS.py --weight "/weights/" --save_base "results/MSCS1203_newc1" --data_cfg "./dataprocess/cfg/datacfg_MRCPS_fixpath.yaml" --save_testimg
+python test_MSCPS.py --weight "./results/MSCS_labBreast_Mackey_0601/best_model_epoch.pth" --save_base "results/MSCS_labBreast_Mackey_0601" --data_cfg "./dataprocess/cfg/datacfg_MRCPS_labBreast.yaml" --save_testimg
