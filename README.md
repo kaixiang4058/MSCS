@@ -50,3 +50,23 @@ python train_MSCPS.py --num_epochs 20 --consistency_ratio 0.5 --save_base "resul
   - `val_records.json`
 - Test records:
   - `test_records.json`
+
+---
+
+### 其他工具程式說明
+
+#### `inf_wsi.py`
+- 實作 `WSIPatchDataset`，用於從 whole-slide image（WSI）讀取 patch。
+- 使用 `pyvips` 讀取 TIFF/WSI 檔案，並根據 patch size、stride、背景閾值自動生成 patch 位置。
+- 支援多尺度分支（`lrratio`）與低解析度 patch 輸入。
+- 提供影像轉換與輔助函式，例如 `numpy2vips()`、`img_tensor2pillow()`、`img_tensor2pillow_mask()`。
+
+#### `model_info.py`
+- 建立 `ModelMRCPS()` 模型實例。
+- 若提供 `preweight` 權重檔，會嘗試載入 checkpoint。
+- 列印模型參數字典與分支權重鍵值（例如 `branch1` 相關參數），方便檢查模型結構與權重匹配。
+
+#### `plt_curve.py`
+- 讀取結果資料夾中的 `val_records.json` 並繪製訓練指標曲線。
+- 預設繪製 `IoU`，可修改為 `Fscore`、`Recall`、`Precision`、`sensitivity`、`specificity`。
+- 產生的圖檔預設儲存為 `./results/otherset_1141029/{metric.lower()}_over_epochs.png`，可修改 `filefolder` 路徑以對應自己的實驗資料夾。
