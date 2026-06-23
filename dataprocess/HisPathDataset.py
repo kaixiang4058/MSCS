@@ -154,13 +154,21 @@ class HisPathDataset(Dataset):
             'tissue_labeled_light': 1,
         }
 
+        # limit = {
+        #     'tissue_background': [0, 500] if stage == "train_unlabel" else [0, 100],
+        #     'partial_background': [0, 500] if stage == "train_unlabel" else [0, 100],
+        #     'partial_label_heavy': [0, 500],
+        #     'partial_label_light': [0, 250],
+        #     'tissue_labeled_heavy': [0, 500],
+        #     'tissue_labeled_light': [0, 250],
+        # }
         limit = {
-            'tissue_background': [0, 500] if stage == "train_unlabel" else [0, 100],
-            'partial_background': [0, 500] if stage == "train_unlabel" else [0, 100],
-            'partial_label_heavy': [0, 500],
-            'partial_label_light': [0, 250],
-            'tissue_labeled_heavy': [0, 500],
-            'tissue_labeled_light': [0, 250],
+            'tissue_background': [0, 5000] if stage == "train_unlabel" else [0, 1000],
+            'partial_background': [0, 5000] if stage == "train_unlabel" else [0, 1000],
+            'partial_label_heavy': [0, 5000],
+            'partial_label_light': [0, 2500],
+            'tissue_labeled_heavy': [0, 5000],
+            'tissue_labeled_light': [0, 2500],
         }
         
         datalist = []

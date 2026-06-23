@@ -28,3 +28,26 @@ class ModelMRCPS(nn.Module):
         else:
             return torch.argmax(getattr(self, f'branch{step}')(x, lrx), dim=1)
 
+
+class ModelMRCPS_Branch1(nn.Module):
+    """
+    Single branch model for branch 1 (CNN branch: Resnest + Segformer)
+    """
+    def __init__(self, lrscale=8, classes=4):
+        super().__init__()
+        self.branch = MSUnetHub(encoder_name="resnest26d", lrbackbone="nvidia/mit-b1", lrscale=lrscale, classes=classes)
+        
+    def forward(self, x, lrx):
+        return torch.argmax(self.branch(x, lrx), dim=1)
+
+
+class ModelMRCPS_Branch2(nn.Module):
+    """
+    Single branch model for branch 2 (Transformer branch: Segformer + Segformer)
+    """
+    def __init__(self, lrscale=8, classes=4):
+        super().__init__()
+        self.branch = MSUnetHub(encoder_name="nvidia/mit-b1", lrbackbone="nvidia/mit-b1", lrscale=lrscale, classes=classes)
+        
+    def forward(self, x, lrx):
+        return torch.argmax(self.branch(x, lrx), dim=1)

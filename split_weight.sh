@@ -1,0 +1,1 @@
+python split_wieghts.py --input "./results/MSCS_labBreast_Mackey_0601/best_model_epoch.pth" --out1 "./results/MSCS_labBreast_Mackey_0601/best_model_epoch_branch1CNN.pth" --out2 "./results/MSCS_labBreast_Mackey_0601/best_model_epoch_branch2ViT.pth" 
